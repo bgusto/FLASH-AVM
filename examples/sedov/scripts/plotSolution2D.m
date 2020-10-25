@@ -97,4 +97,4 @@ end
 hold off;
 
 % print figure
-%print(figure(1),'sedov-n4096-amr-eps1e01-pressure-mesh','-dpng','-r700');
+print(figure(1),'sedov-pressure-mesh','-dpng','-r450');
