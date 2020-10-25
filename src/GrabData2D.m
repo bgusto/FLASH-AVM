@@ -119,7 +119,7 @@ function [vdata mdata x y] = GrabData2D(filenm, varnm, intrp)
         % create new data for block at higher level
         blkdata2 = zeros(2*nyblk,2*nxblk);
 
-        if intrp == 'copy'
+        if strcmp(intrp,'copy')
 
             % loop through cells in block
             for j = 1:nyblk
@@ -134,7 +134,7 @@ function [vdata mdata x y] = GrabData2D(filenm, varnm, intrp)
               end
             end
 
-        elseif intrp == 'avginterp'
+        elseif strcmp(intrp,'avginterp')
 
             % loop through cells that use centered stencil
             for j = 2:nyblk-1
