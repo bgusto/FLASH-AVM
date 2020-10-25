@@ -8,7 +8,9 @@ function [vdata x] = GrabData1D(filenm, varnm, intrp)
 %   The function takes block-partitioned data and converts it into a single
 %   array. For multi-level adaptive mesh refinement data, the user may choose to
 %   prolong all of the data to the finest level using the 'intrp' argument. The
-%   function assumes that the blocks contain a fixed number of cells.
+%   function assumes that the blocks contain a fixed number of cells. Currenty,
+%   the only choice for prolonging data is a direct copy. Third-order
+%   average-preserving interpolation coming soon.
 %
 % Inputs:
 %   filenm - the hdf5 filename
@@ -127,7 +129,7 @@ function [vdata x] = GrabData1D(filenm, varnm, intrp)
           blkdata2 = zeros(1,2*nxblk);
 
           % determine how to prolong data
-          if intrp == 'copy'
+          if strcmp(intrp,'copy')
 
             % copy parent cells to children
             for i = 1:nxblk

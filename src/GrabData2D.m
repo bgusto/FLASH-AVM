@@ -6,7 +6,10 @@ function [vdata mdata x y] = GrabData2D(filenm, varnm, intrp)
 % Info: This function grabs data from FLASH hdf5 files for the variable of
 %   interest.  The function returns a an array the size of the numbre of blocks,
 %   with each element containing that block's structured data (specified by
-%   'varnm'). Assumes data is cell-centered (no face-vars).
+%   'varnm'). Assumes data is cell-centered (no face-vars). Current prolongation
+%   options are 'copy' and 'avginterp.' The former simply copies the parent cell
+%   value to the children, while the latter uses a third-order average
+%   interpolating polynomial which is biased on the block boundaries.
 %
 % Inputs:
 %   filenm -  the hdf5 filename
@@ -350,6 +353,10 @@ function [vdata mdata x y] = GrabData2D(filenm, varnm, intrp)
             blkdata2(2*i,2*j) = (- 5.0*u13 + ...
                             20.0*u21 + 16.0*u22 - 4.0*u23 - 5.0*u31 - ...
                             4.0*u32 + u33 + 25.0*u11 + 20.0*u12) * 0.015625;
+
+        else
+
+            error('Invalid prolongation option: intrp. Valid options are: copy, avginterp')
 
         end
 
