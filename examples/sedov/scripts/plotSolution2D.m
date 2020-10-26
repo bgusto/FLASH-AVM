@@ -11,7 +11,7 @@ imap = load('hot_desaturated.mat');
 imap = imap.hot_desat;
 
 % misc. options
-fs_labl = 15;       % abcissa-ordinate label fontsize
+fs_labl = 17;       % abcissa-ordinate label fontsize
 mt = 0.5;           % mesh line thickness
 
 % set filename and basename
@@ -21,7 +21,7 @@ chk = 383;
 basenm = '../data/sedov_hdf5_plt_cnt_';
 
 % get data
-[pres m x y] = GrabData2D([basenm sprintf('%0.4d',chk)],'pres','avginterp');
+[pres m x y] = GrabData2D([basenm sprintf('%0.4d',chk)],'pres','copy');
 
 % viewing window
 pxmin = 0.5;
@@ -68,33 +68,35 @@ set(gca, 'Layer', 'top');
 grid off
 
 % plot mesh
-for k = 1:length(m)
+PlotMesh2D(m);
 
-  % width, length, and number of points to use
-  w = m(2,k) - m(1,k);
-  h = m(4,k) - m(3,k);
-  np = 128;
-
-  % plot bottom line
-  px = linspace(m(1,k),m(2,k),np);
-  py = m(3,k) * ones(1,np);
-  plot3(px,py,1e10*ones(1,np),'color','[0.8,0.8,0.8]'); hold on;
-
-  % plot top line
-  py = m(4,k) * ones(1,np);
-  plot3(px,py,1e10*ones(1,np),'color','[0.8,0.8,0.8]'); hold on;
-
-  % plot left line
-  py = linspace(m(3,k),m(4,k),np);
-  px = m(1,k) * ones(1,np);
-  plot3(px,py,1e10*ones(1,np),'color','[0.8,0.8,0.8]'); hold on;
-
-  % plot right line
-  px = m(2,k) * ones(1,np);
-  plot3(px,py,1e10*ones(1,np),'color','[0.8,0.8,0.8]'); hold on;
-
-end
-hold off;
+%for k = 1:length(m)
+%
+%  % width, length, and number of points to use
+%  w = m(2,k) - m(1,k);
+%  h = m(4,k) - m(3,k);
+%  np = 128;
+%
+%  % plot bottom line
+%  px = linspace(m(1,k),m(2,k),np);
+%  py = m(3,k) * ones(1,np);
+%  plot3(px,py,1e10*ones(1,np),'color','[0.8,0.8,0.8]'); hold on;
+%
+%  % plot top line
+%  py = m(4,k) * ones(1,np);
+%  plot3(px,py,1e10*ones(1,np),'color','[0.8,0.8,0.8]'); hold on;
+%
+%  % plot left line
+%  py = linspace(m(3,k),m(4,k),np);
+%  px = m(1,k) * ones(1,np);
+%  plot3(px,py,1e10*ones(1,np),'color','[0.8,0.8,0.8]'); hold on;
+%
+%  % plot right line
+%  px = m(2,k) * ones(1,np);
+%  plot3(px,py,1e10*ones(1,np),'color','[0.8,0.8,0.8]'); hold on;
+%
+%end
+%hold off;
 
 % print figure
 print(figure(1),'sedov-pressure-mesh','-dpng','-r450');

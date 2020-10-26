@@ -38,12 +38,12 @@ function [vdata mdata x y] = GrabData2D(filenm, varnm, intrp)
   mdata = zeros(4,length(find(nodetyp==1)));
 
   % initialize xmin, xmax, ymin, ymax + dxmin + dymin
-  xmin = 1e25; xmax = -1e25;
-  ymin = 1e25; ymax = -1e25;
+  xmin = realmax; xmax = -realmax;
+  ymin = realmax; ymax = -realmax;
 
   % initialize to large number
-  dxmin = 1e25;
-  dymin = 1e25;
+  dxmin = realmax;
+  dymin = realmax;
 
   % initial sweep through data to get xmin, xmax, ymin, ymax + dx, dy
   cnt = 1;
