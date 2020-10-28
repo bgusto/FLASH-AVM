@@ -70,33 +70,5 @@ grid off
 % plot mesh
 PlotMesh2D(m);
 
-%for k = 1:length(m)
-%
-%  % width, length, and number of points to use
-%  w = m(2,k) - m(1,k);
-%  h = m(4,k) - m(3,k);
-%  np = 128;
-%
-%  % plot bottom line
-%  px = linspace(m(1,k),m(2,k),np);
-%  py = m(3,k) * ones(1,np);
-%  plot3(px,py,1e10*ones(1,np),'color','[0.8,0.8,0.8]'); hold on;
-%
-%  % plot top line
-%  py = m(4,k) * ones(1,np);
-%  plot3(px,py,1e10*ones(1,np),'color','[0.8,0.8,0.8]'); hold on;
-%
-%  % plot left line
-%  py = linspace(m(3,k),m(4,k),np);
-%  px = m(1,k) * ones(1,np);
-%  plot3(px,py,1e10*ones(1,np),'color','[0.8,0.8,0.8]'); hold on;
-%
-%  % plot right line
-%  px = m(2,k) * ones(1,np);
-%  plot3(px,py,1e10*ones(1,np),'color','[0.8,0.8,0.8]'); hold on;
-%
-%end
-%hold off;
-
 % print figure
 print(figure(1),'sedov-pressure-mesh','-dpng','-r450');
