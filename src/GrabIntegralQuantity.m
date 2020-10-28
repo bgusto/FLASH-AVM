@@ -5,10 +5,11 @@ function [iq t] = GrabIntegralQuantity(filenm, iqnm)
 %
 % Inputs:
 %   filenm -  the integral quantities filename
-%   varnm -   the integral quantity name to grab
+%   ignm -   the integral quantity name to grab
 %
 % Outputs:
 %   iq - the integral quantity 
+%   t  - time
 %
 %-------------------------------------------------------------------------------%
 
