@@ -1,4 +1,4 @@
-# flash-avm
+# FLASH-AVM
 A Matlab-based analysis and visualization toolkit for the FLASH simulation code
 (http://flash.uchicago.edu/site/flashcode/). While many visualization software
 are compatible with FLASH data, few are well-suited for making
