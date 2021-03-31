@@ -1,6 +1,6 @@
-function [vdata mdata x y z] = GrabData2D(filenm, varnm, intrp, reflvl)
+function [vdata mdata x y z] = GrabData3D(filenm, varnm, intrp, reflvl)
 %
-% GrabData2D Grab one-dimensional data from the specified input file.
+% GrabData3D Grab three-dimensional data from the specified input file.
 %
 %-------------------------------------------------------------------------------%
 % Info: This function grabs data from FLASH hdf5 files for the variable of
@@ -22,6 +22,22 @@ function [vdata mdata x y z] = GrabData2D(filenm, varnm, intrp, reflvl)
 %   x - meshgrid, x coordinates
 %   y - meshgrid, y coordinates
 %   z - meshgrid, z coordinates
+%
+% Licensing:
+%   This file is part of FLASH-AVM.
+%   
+%   FLASH-AVM is free software: you can redistribute it and/or modify
+%   it under the terms of the GNU General Public License as published by
+%   the Free Software Foundation, either version 3 of the License, or
+%   (at your option) any later version.
+%   
+%   FLASH-AVM is distributed in the hope that it will be useful,
+%   but WITHOUT ANY WARRANTY; without even the implied warranty of
+%   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+%   GNU General Public License for more details.
+%   
+%   You should have received a copy of the GNU General Public License
+%   along with FLASH-AVM.  If not, see <https://www.gnu.org/licenses/>.
 %
 %-------------------------------------------------------------------------------%
 

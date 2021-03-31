@@ -1,7 +1,13 @@
 function [iq t] = GrabIntegralQuantity(filenm, iqnm, indx)
-
+%
+% GrabIntegralQuantity Grab data from the integral quantities file
+%
 %-------------------------------------------------------------------------------%
-% Info:
+% Info: This function grabs data from the integral quantities file, written by
+%   the IO_writeIntegralQuantities routine of FLASH. The function can take a
+%   string argument to match the variable of interest, or the position of the
+%   variable in the file can be explicitly specified with the optional argument
+%   'indx'. Note that time is always output.
 %
 % Inputs:
 %   filenm - the integral quantities filename
@@ -11,6 +17,22 @@ function [iq t] = GrabIntegralQuantity(filenm, iqnm, indx)
 % Outputs:
 %   iq - the integral quantity 
 %   t  - time (always output)
+%
+% Licensing:
+%   This file is part of FLASH-AVM.
+%   
+%   FLASH-AVM is free software: you can redistribute it and/or modify
+%   it under the terms of the GNU General Public License as published by
+%   the Free Software Foundation, either version 3 of the License, or
+%   (at your option) any later version.
+%   
+%   FLASH-AVM is distributed in the hope that it will be useful,
+%   but WITHOUT ANY WARRANTY; without even the implied warranty of
+%   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+%   GNU General Public License for more details.
+%   
+%   You should have received a copy of the GNU General Public License
+%   along with FLASH-AVM.  If not, see <https://www.gnu.org/licenses/>.
 %
 %-------------------------------------------------------------------------------%
 
