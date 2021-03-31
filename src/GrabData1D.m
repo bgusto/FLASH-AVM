@@ -1,4 +1,4 @@
-function [vdata x] = GrabData1D(filenm, varnm, intrp)
+function [vardata x xc delx] = GrabData1D(filenm, varnm, intrp, reflvl)
 %
 % GrabData1D Grab one-dimensional data from the specified input file.
 %
@@ -16,9 +16,15 @@ function [vdata x] = GrabData1D(filenm, varnm, intrp)
 %   filenm - the hdf5 filename
 %   varnm  - the variable name to be plotted from hdf5 files (a string)
 %   intrp  - optional interpolation choice, if prolonging data
+%   reflvl - the desired refinement level, using the coarsest parent block
+%            found in the input file as the base level (found automatically if
+%            not provided and compatible 'intrp' option specified)
 %
 % Outputs:
-%   vdata - the output array
+%   vardata - the output array
+%   x       - the cell edges
+%   xc      - the cell centers
+%   dx      - the cell widths
 %
 %-------------------------------------------------------------------------------%
 
@@ -41,23 +47,31 @@ function [vdata x] = GrabData1D(filenm, varnm, intrp)
   % initialize block bounding coordinates array
   mdata = zeros(2,length(find(nodetyp==1)));
 
-  if ~prolong
-
-    % initialize output arrays
-    x = [];
-    vdata = [];
-
+  % determine max level automatically if prolonging and no desired refinement level given
+  if prolong
+    if nargin < 4
+      reflvl = max(lrefine);
+    end
   end
 
-  % initialize xmin, xmax
+  % initialize output arrays for the non-prolonged case
+  if ~prolong
+    x = [];
+    xc = [];
+    delx = [];
+    vardata = [];
+  end
+
+  % initialize the global xmin, xmax
   xmin = 0.0; xmax = 0.0;
+  maxlvl = 0;
 
   % initialize minimum dx (because we want to know what dx is on finest level)
   dxmin = 1e25;
 
   % loop through blocks
   cnt = 1;
-  for blk = 1 : nblocks
+  for blk = 1:nblocks
 
     % check if leaf block
     if nodetyp(blk) == 1
@@ -71,19 +85,22 @@ function [vdata x] = GrabData1D(filenm, varnm, intrp)
       xmax = max(xmax,xhi);
 
       % cell width
-      dx = ( xhi - xlo ) / nxb;
-      dxmin = min(dxmin, (xhi - xlo) / nxb);
+      dx = (xhi - xlo) / nxb;
+      dxmin = min(dxmin, dx);
+
+      % remember which level dxmin found on
+      maxlvl = max(maxlvl, lrefine(blk));
 
       % save in mesh data
       mdata(1,cnt) = xlo;
       mdata(2,cnt) = xhi;
 
+      % if not prolonging, concatenate current block information to global adaptive array
       if ~prolong
-
-        % concatenate cell data
-        x = [ x xlo+dx/2:dx:xhi-dx/2 ];
-        vdata = [ vdata Data{4}(:,1,1,blk)' ];
-
+        x = [x xlo:dx:xhi];
+        xc = [xc (xlo+dx/2):dx:(xhi-dx/2)];
+        delx = [delx dx*ones(1,nxb)];
+        vardata = [vardata Data{4}(:,1,1,blk)'];
       end
 
     end
@@ -96,12 +113,34 @@ function [vdata x] = GrabData1D(filenm, varnm, intrp)
   % generate output data (prolong or not)
   if prolong
 
-    % create the global domain, compute number of cells
-    x = xmin:dxmin:xmax;
-    nx = length(x)-1;
+    % determine number of base blocks
+    nbase = 0;
+    for blk = 1:nblocks
+      if lrefine(blk) == 1
+        nbase = nbase + 1;
+      end
+    end
 
-    % initialize the global block of data (in 1D just an array)
-    vdata = zeros(1,nx);
+    % create the global domain, compute number of cells
+    if reflvl == maxlvl
+
+      x = xmin:dxmin:xmax;
+      nx = length(x)-1;
+
+    else
+
+      % compute number of cells on finest level to cover domain
+      nx = nbase * nxb * 2^(reflvl-1);
+      x = linspace(xmin, xmax, nx+1);
+
+    end
+
+    % compute cell centers and cell widths as well
+    xc = abs(x(1:end-1) + x(2:end)) / 2;
+    delx = abs(x(2:end) - x(1:end-1));
+
+    % initialize the global block of data
+    vardata = zeros(1,nx);
 
     % now map the data on blocks to the global data array
     for blk = 1:nblocks
@@ -120,7 +159,7 @@ function [vdata x] = GrabData1D(filenm, varnm, intrp)
         lvl = lrefine(blk);
 
         % prolong the data to finest level
-        for l = lvl:max(lrefine)-1
+        for l = lvl:reflvl-1
 
           % get size of current block
           nxblk = length(blkdata);
@@ -156,7 +195,7 @@ function [vdata x] = GrabData1D(filenm, varnm, intrp)
 
         % copy data
         for i = 0:nxblk-1
-          vdata(iglb+i) = blkdata(i+1);
+          vardata(iglb+i) = blkdata(i+1);
         end
 
       end
@@ -166,8 +205,10 @@ function [vdata x] = GrabData1D(filenm, varnm, intrp)
   else
 
     % sort data based on coordinates
-    [x ia] = sort(x);
-    vdata = vdata(ia);
+    x = unique(x);
+    [xc ia] = sort(xc);
+    delx = vardata(ia);
+    vardata = vardata(ia);
 
   end
 

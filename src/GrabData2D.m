@@ -1,4 +1,4 @@
-function [vdata mdata x y] = GrabData2D(filenm, varnm, intrp)
+function [vdata mdata x y] = GrabData2D(filenm, varnm, intrp, reflvl)
 %
 % GrabData2D Grab one-dimensional data from the specified input file.
 %
@@ -45,6 +45,19 @@ function [vdata mdata x y] = GrabData2D(filenm, varnm, intrp)
   dxmin = realmax;
   dymin = realmax;
 
+  % determine max level if prolonging
+  if nargin < 4
+    reflvl = max(lrefine);
+  end
+
+  % determine number of base blocks
+  nbase = 0;
+  for blk = 1:nblocks
+    if lrefine(blk) == 1
+      nbase = nbase + 1;
+    end
+  end
+
   % initial sweep through data to get xmin, xmax, ymin, ymax + dx, dy
   cnt = 1;
   for blk = 1:nblocks
@@ -81,13 +94,23 @@ function [vdata mdata x y] = GrabData2D(filenm, varnm, intrp)
 
   end
 
-  % create the global domain
-  x = xmin:dxmin:xmax;
-  y = ymin:dymin:ymax;
+  if reflvl == max(lrefine)
 
-  % number of cells
-  nx = length(x)-1;
-  ny = length(y)-1;
+    % create the global domain
+    x = xmin:dxmin:xmax;
+    y = ymin:dymin:ymax;
+
+    % number of cells
+    nx = length(x)-1;
+    ny = length(y)-1;
+
+  else
+
+    % compute number of cells on finest level to cover domain
+    nx = sqrt(nbase) * nxb * 2^(reflvl-1);
+    ny = sqrt(nbase) * nyb * 2^(reflvl-1);
+
+  end
 
   % create meshgrid
   [x, y] = meshgrid(linspace(xmin,xmax,nx),linspace(ymin,ymax,ny));
