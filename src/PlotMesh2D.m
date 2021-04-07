@@ -1,9 +1,11 @@
-function [] = PlotMesh2D(mesh,color)
+function [] = PlotMesh2D(mesh, color)
 %
 % PlotMesh2D Plot the mesh block outlines
 %
 %-------------------------------------------------------------------------------%
-% Info:
+% Info: Plots mesh block outlines. Can be used to mesh block outlines over
+%   existing pseudocolor plot. Currently only supports rectilinear coordinate
+%   systems.
 %
 % Inputs:
 %   mesh  - the array containing mesh boundary info
@@ -12,12 +14,32 @@ function [] = PlotMesh2D(mesh,color)
 %
 % Outputs:
 %
+% Licensing:
+%   This file is part of FLASH-AVM.
+%
+%   FLASH-AVM is free software: you can redistribute it and/or modify
+%   it under the terms of the GNU General Public License as published by
+%   the Free Software Foundation, either version 3 of the License, or
+%   (at your option) any later version.
+%
+%   FLASH-AVM is distributed in the hope that it will be useful,
+%   but WITHOUT ANY WARRANTY; without even the implied warranty of
+%   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+%   GNU General Public License for more details.
+%
+%   You should have received a copy of the GNU General Public License
+%   along with FLASH-AVM.  If not, see <https://www.gnu.org/licenses/>.
+%
+% Author:
+%   Brandon Gusto
+%   blg13@my.fsu.edu
+%
 %-------------------------------------------------------------------------------%
 
     % optional arguments (default color)
     if nargin < 2
         color = '[0.8 0.8 0.8]';
-    end 
+    end
 
     % number of points per line
     np = 2;

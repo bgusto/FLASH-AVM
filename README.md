@@ -19,4 +19,7 @@ parties is welcome.
 ## Quick-start:
 
 Set the following environment variable:
-FLASHAVM="path-to-flashavm/src/"
+FLASHAVM="path-to-flashavm/"
+
+Add the following command to any Matlab script:
+addpath(genpath(getenv('FLASHAVM')));

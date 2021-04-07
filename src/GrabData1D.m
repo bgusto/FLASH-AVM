@@ -28,19 +28,23 @@ function [vardata x xc delx] = GrabData1D(filenm, varnm, intrp, reflvl)
 %
 % Licensing:
 %   This file is part of FLASH-AVM.
-%   
+%
 %   FLASH-AVM is free software: you can redistribute it and/or modify
 %   it under the terms of the GNU General Public License as published by
 %   the Free Software Foundation, either version 3 of the License, or
 %   (at your option) any later version.
-%   
+%
 %   FLASH-AVM is distributed in the hope that it will be useful,
 %   but WITHOUT ANY WARRANTY; without even the implied warranty of
 %   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 %   GNU General Public License for more details.
-%   
+%
 %   You should have received a copy of the GNU General Public License
 %   along with FLASH-AVM.  If not, see <https://www.gnu.org/licenses/>.
+%
+% Author:
+%   Brandon Gusto
+%   blg13@my.fsu.edu
 %
 %-------------------------------------------------------------------------------%
 
@@ -54,7 +58,7 @@ function [vardata x xc delx] = GrabData1D(filenm, varnm, intrp, reflvl)
   % get 'varnm' variable data from current hdf5 data
   Data = GrabHDF5(filenm,{'node type', 'bounding box', 'refine level', varnm});
 
-  % mesh metadata 
+  % mesh metadata
   nodetyp = Data{1};                  % the type of AMR block (leaf or not)
   nblocks = length(Data{1});          % the number of AMR blocks in the mesh
   lrefine = Data{3};                  % the refinement level of the block ID
