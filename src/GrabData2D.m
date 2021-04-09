@@ -24,26 +24,30 @@ function [vdata mdata x y] = GrabData2D(filenm, varnm, intrp, reflvl)
 %
 % Licensing:
 %   This file is part of FLASH-AVM.
-%   
+%
 %   FLASH-AVM is free software: you can redistribute it and/or modify
 %   it under the terms of the GNU General Public License as published by
 %   the Free Software Foundation, either version 3 of the License, or
 %   (at your option) any later version.
-%   
+%
 %   FLASH-AVM is distributed in the hope that it will be useful,
 %   but WITHOUT ANY WARRANTY; without even the implied warranty of
 %   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 %   GNU General Public License for more details.
-%   
+%
 %   You should have received a copy of the GNU General Public License
 %   along with FLASH-AVM.  If not, see <https://www.gnu.org/licenses/>.
+%
+% Author:
+%   Brandon Gusto
+%   blg13@my.fsu.edu
 %
 %-------------------------------------------------------------------------------%
 
   % get 'varnm' variable data from current hdf5 data
   Data = GrabHDF5(filenm,{'node type', 'bounding box', 'refine level', varnm});
 
-  % amr metadata 
+  % amr metadata
   nodetyp = Data{1};
   nblocks = length(Data{1});
   lrefine = Data{3};
@@ -85,7 +89,7 @@ function [vdata mdata x y] = GrabData2D(filenm, varnm, intrp, reflvl)
       xlo = Data{2}(1,1,blk);
       xhi = Data{2}(2,1,blk);
       ylo = Data{2}(1,2,blk);
-      yhi = Data{2}(2,2,blk); 
+      yhi = Data{2}(2,2,blk);
 
       % determine the bounding box of the global block
       xmin = min(xmin,xlo);
@@ -144,7 +148,7 @@ function [vdata mdata x y] = GrabData2D(filenm, varnm, intrp, reflvl)
       xlo = Data{2}(1,1,blk);
       xhi = Data{2}(2,1,blk);
       ylo = Data{2}(1,2,blk);
-      yhi = Data{2}(2,2,blk); 
+      yhi = Data{2}(2,2,blk);
 
       % get data
       blkdata = Data{4}(:,:,1,blk);
