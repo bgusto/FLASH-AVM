@@ -1,0 +1,7 @@
+Feature wishlist:
+
+  - Uniform routine prolongs AMR data to desired level in 2D and 3D
+  - Store 'nblockx, ...' in nonuniform field
+
+New Features
+  - GrabData now retrieves simulation time and current timestep size

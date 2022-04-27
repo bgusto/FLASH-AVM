@@ -1,13 +1,20 @@
-function dataStruct = Curve(dataStruct, meshtype)
+function dataStruct = Curve(dataStruct, meshType, refLevel)
 %
-% Curve Convert a dataStruct from 'Grabata' to a one-dimensional curve
+% Curve Convert a dataStruct from 'GrabData' to a one-dimensional curve
 %
 %-------------------------------------------------------------------------------%
 % Info:
+%   This function takes the (one-dimensional) data output from GrabData.m
+%   and reformats the nonuniform (multi-block) data into a contiguous array. The
+%   output data will be nonuniform if the original data set uses adaptive mesh
+%   refinement unless the input field 'refLevel' is set to the desired output AMR
+%   level, in which case the nonuniform data will be prolonged to that desired
+%   level. The routine creates a new field in the 'dataStruct' structure called
+%   'curve'.
 %
 % Inputs:
 %   dataStruct - structure containing all data fields (solution field, mesh data, etc.)
-%   meshtype   - desired discretization; uniform or non-uniform
+%   meshType   - desired discretization; uniform or non-uniform
 %
 % Outputs:
 %
@@ -36,11 +43,11 @@ function dataStruct = Curve(dataStruct, meshtype)
 
   % set default discretization style
   if nargin < 2
-    meshtype = 'nonuniform';
+    meshType = 'nonuniform';
   end
 
-  % produce 1D curve based on desired meshtype
-  if strcmp(meshtype, 'nonuniform')
+  % produce 1D curve based on desired meshType
+  if strcmp(meshType, 'nonuniform')
 
     % initialize curve arrays
     dataStruct.curve.x = [];
@@ -54,7 +61,7 @@ function dataStruct = Curve(dataStruct, meshtype)
     [tmp, ord] = sort(dataStruct.nonuniform.meshbnd(1,1,:));
 
     % loop through blocks in data structure
-    for b = 1:dataStruct.(meshtype).nblocks
+    for b = 1:dataStruct.nonuniform.nblocks
 
       % get block id from ordered array
       blk = ord(b);
@@ -85,7 +92,84 @@ function dataStruct = Curve(dataStruct, meshtype)
       dataStruct.curve.(dataStruct.vars{v}) = dataStruct.curve.(dataStruct.vars{v})(ord);
     end
 
-  else
+  elseif strcmp(meshType, 'uniform')
+
+    % get max mesh level
+    if nargin < 3
+      lref_max = max(dataStruct.nonuniform.lrefine);
+    else
+      lref_max = refLevel;
+    end
+
+    % first we have to count the size of required arrays :(
+    nxb = length(dataStruct.nonuniform.mesh(:,1,1)) - 1;
+    cnt = 0;
+    for b = 1:dataStruct.nonuniform.nblocks
+      lref = dataStruct.nonuniform.lrefine(b);
+      ldiff = lref_max - lref;
+      cnt = cnt + 2^ldiff * nxb;
+    end 
+
+    % initialize curve arrays
+    dataStruct.curve.x = zeros(1,cnt);
+    dataStruct.curve.xc = zeros(1,cnt);
+    dataStruct.curve.dx = zeros(1,cnt);
+    for v = 1:dataStruct.nvars
+      dataStruct.curve.(dataStruct.vars{v}) = zeros(1,cnt);
+    end
+
+    % order the blocks from xmin to xmax
+    [tmp, ord] = sort(dataStruct.nonuniform.meshbnd(1,1,:));
+
+    % loop through blocks in data structure
+    cnt = 0;
+    for b = 1:dataStruct.nonuniform.nblocks
+
+      % get block id from ordered array
+      blk = ord(b);
+
+      % get the mesh level of the block
+      lref = dataStruct.nonuniform.lrefine(blk);
+      ldiff = lref_max - lref;
+
+      % geom factors
+      xlo = dataStruct.nonuniform.meshbnd(1,1,blk);
+      xhi = dataStruct.nonuniform.meshbnd(2,1,blk);
+      ncells = (2^ldiff) * length(dataStruct.nonuniform.mesh(1:end-1,1,blk));
+      xloc = linspace(xlo, xhi, ncells+1);
+
+      % set cell edges and midpoints
+      dataStruct.curve.x(cnt+(1:ncells+1)) = xloc;
+      dataStruct.curve.xc(cnt+(1:ncells)) = 0.5*(xloc(1:end-1) + xloc(2:end));
+
+      % set mesh spacing
+      dataStruct.curve.dx(cnt+(1:ncells)) = dataStruct.nonuniform.meshres(blk) * ones(1,ncells);
+
+      % loop through vars
+      for v = 1:dataStruct.nvars
+
+        % loop through original cells
+        for i = 1:nxb;
+
+          ilo = 2^ldiff * (i-1) + 1;
+          ihi = 2^ldiff * i;
+          dataStruct.curve.(dataStruct.vars{v})(cnt+(ilo:ihi)) = ones(1,2^ldiff) * dataStruct.nonuniform.(dataStruct.vars{v})(i,1,1,blk);
+
+        end
+
+      end
+
+      cnt = cnt + ncells;
+
+    end
+
+    %% finally sort data based on coordinates
+    %dataStruct.curve.x = unique(dataStruct.curve.x);
+    %[dataStruct.curve.xc ord] = sort(dataStruct.curve.xc);
+    %dataStruct.curve.dx = dataStruct.curve.dx(ord);
+    %for v = 1:dataStruct.nvars
+    %  dataStruct.curve.(dataStruct.vars{v}) = dataStruct.curve.(dataStruct.vars{v})(ord);
+    %end
 
   end
 

@@ -47,13 +47,23 @@ function dataStruct = GrabData(filenm, vars)
   end
 
   % construct cell array to pass
-  inputs = [{'node type', 'bounding box', 'refine level'} vars];
+  inputs = [{'node type', 'bounding box', 'refine level', 'real scalars'} vars];
 
   % get 'varnm' variable data from current hdf5 data
   tmpData = GrabHDF5(filenm, inputs);
 
   % number of meta data elements
-  nmeta = 3;
+  nmeta = 4;
+
+  % get simulation time
+  for m = 1:length(tmpData{4})
+    scalarnm = strtrim(h5stringconvert(tmpData{4}(m).Data{1}));
+    if strcmp(scalarnm, 'time')
+      dataStruct.simtime = tmpData{4}(m).Data{2};
+    elseif strcmp(scalarnm, 'dt')
+      dataStruct.simdt = tmpData{4}(m).Data{2};
+    end
+  end
 
   % get some mesh metadata
   nodetyp = tmpData{1};                  % the type of AMR block (leaf or not)
@@ -71,8 +81,8 @@ function dataStruct = GrabData(filenm, vars)
   secdim = false;
   terdim = false;
   for blk = 1:nblocks
-    if length(tmpData{4}(1,:,1,blk)) > 1, secdim = true; end
-    if length(tmpData{4}(1,1,:,blk)) > 1, terdim = true; end
+    if length(tmpData{nmeta+1}(1,:,1,blk)) > 1, secdim = true; end
+    if length(tmpData{nmeta+1}(1,1,:,blk)) > 1, terdim = true; end
   end
 
   % inform data structure of dimensionality
@@ -99,9 +109,14 @@ function dataStruct = GrabData(filenm, vars)
       zhi = tmpData{2}(2,3,blk);
 
       % get number of cells in block
-      nxb = length(tmpData{4}(:,1,1,blk));
-      if secdim, nyb = length(tmpData{4}(1,:,1,blk)); end
-      if terdim, nzb = length(tmpData{4}(1,1,:,blk)); end
+      nxb = length(tmpData{nmeta+1}(:,1,1,blk));
+      if secdim, nyb = length(tmpData{nmeta+1}(1,:,1,blk)); end
+      if terdim, nzb = length(tmpData{nmeta+1}(1,1,:,blk)); end
+
+      % save nxb, nyb, nzb
+      data.nonuniform.ncb = [nxb];
+      if secdim, data.nonuniform.ncb = [nxb nyb]; end
+      if terdim, data.nonuniform.ncb = [nxb nyb nzb]; end
 
       % cell width
       dx = (xhi - xlo) / nxb;
@@ -162,130 +177,14 @@ function dataStruct = GrabData(filenm, vars)
 
   % save the global xmin, xmax, ...
   dataStruct.dombnd(1,1) = xmin;
-  dataStruct.dombnd(2,1) = xmin;
+  dataStruct.dombnd(2,1) = xmax;
   if secdim
     dataStruct.dombnd(1,2) = ymin;
-    dataStruct.dombnd(2,2) = ymin;
+    dataStruct.dombnd(2,2) = ymax;
   end
   if terdim
     dataStruct.dombnd(1,3) = zmin;
-    dataStruct.dombnd(2,3) = zmin;
+    dataStruct.dombnd(2,3) = zmax;
   end
-  % generate output data (prolong or not)
-  %%%if prolong
-
-  %%%  % determine max level automatically if prolonging and no desired refinement level given
-  %%%  if nargin < 4
-  %%%    reflvl = max(lrefine);
-  %%%  end
-
-  %%%  % determine number of base blocks in each direction, create array of block centers
-  %%%  nbasex = 0;
-  %%%  if secdim, nbasey = 0;
-  %%%  if terdim, nbasez = 0;
-  %%%  blkxcenters = [];
-  %%%  if secdim, blkycenters = [];
-  %%%  if terdim, blkzcenters = [];
-  %%%  for blk = 1:nblocks
-  %%%    if lrefine(blk) == 1
-
-  %%%      % add block center to array
-  %%%      blkxcenters = [blkxcenters 0.5*(tmpData{2}(1,1,blk)+tmpData{2}(2,1,blk))];
-  %%%      if secdim, blkycenters = [blkycenters 0.5*(tmpData{2}(1,2,blk)+tmpData{2}(2,2,blk))];
-  %%%      if terdim, blkzcenters = [blkzcenters 0.5*(tmpData{2}(1,3,blk)+tmpData{2}(2,3,blk))];
-
-  %%%    end
-  %%%  end
-
-  %%%  % get unique block centers
-  %%%  blkxcenters = sort(unique(blkxcenters));
-  %%%  if secdim, blkycenters = sort(unique(blkycenters));
-  %%%  if terdim, blkzcenters = sort(unique(blkzcenters));
-
-  %%%  % compute number of base blocks based on base block centers
-  %%%  nbasex = length(blkxcenters);
-  %%%  if secdim, nbasey = length(blkycenters);
-  %%%  if terdim, nbasez = length(blkzcenters);
-
-  %%%  % compute number of cells on finest level to cover domain
-  %%%  nxglob = nbasex * nxb * 2^(reflvl-1);
-  %%%  if secdim, nyglob = nbasey * nyb * 2^(reflvl-1);
-  %%%  if terdim, nzglob = nbasez * nzb * 2^(reflvl-1);
-
-  %%%  % compute mesh based on number of cells
-  %%%  dataStruct.uniform.mesh(:,1) = linspace(xmin, xmax, nxglob+1);
-  %%%  if secdim, dataStruct.uniform.mesh(:,2) = linspace(ymin, ymax, nyglob+1);
-  %%%  if terdim, dataStruct.uniform.mesh(:,3) = linspace(zmin, zmax, nzglob+1);
-
-  %%%  % map the data on leaf blocks to the global data array
-  %%%  for blk = 1:(cnt-1)
-
-  %%%    % get number of cells in each direction
-  %%%    nxb = length(dataStruct.nonuniform.mesh(:,blk,1));
-  %%%    if secdim
-  %%%      nyb = length(dataStruct.nonuniform.mesh(:,blk,2));
-  %%%    else
-  %%%      nyb = 0;
-  %%%    end
-  %%%    if terdim
-  %%%      nzb = length(dataStruct.nonuniform.mesh(:,blk,3));
-  %%%    else
-  %%%      nzb = 0;
-  %%%    end
-
-  %%%    % loop through user-selected variables
-  %%%    for v = 1:length(vars)
-
-  %%%      % make temporary copy of solution data
-  %%%      blkdata = dataStruct.nonuniform.(vars{v})(:,:,:,blk);
-
-  %%%      % prolong the data to finest level
-  %%%      for l = dataStruct.nonuniform.lrefine(blk):reflvl-1
-
-  %%%        % create new temporary storage space for block at higher level
-  %%%        blkdata2 = zeros(2*nxb, max(1,2*nyb), max(1,2*nzb));
-
-  %%%        % determine how to prolong data
-  %%%        if strcmp(intrp,'copy')
-
-  %%%          switch dataStruct.ndim
-
-  %%%            case 1
-
-  %%%              % copy parent cells to children
-  %%%              for i = 1:nxb
-  %%%                blkdata2(2*i-1) = blkdata(i,1,1);
-  %%%                blkdata2(2*i) = blkdata(i,1,1);
-  %%%              end
-
-  %%%            end
-
-  %%%          else
-
-  %%%            error('Invalid prolongation option: intrp. Valid options are ... copy')
-
-  %%%          end
-
-  %%%          % copy variable for next iteration
-  %%%          blkdata = blkdata2;
-
-  %%%        end
-
-  %%%        % get size of this newly created block
-  %%%        nxblk = length(blkdata);
-
-  %%%        % determine the starting (i,j) indices in global array
-  %%%        iglb = int32((xlo - xmin) / dxmin + 1);
-
-  %%%        % copy data
-  %%%        for i = 0:nxblk-1
-  %%%          vardata(iglb+i) = blkdata(i+1);
-  %%%        end
-
-  %%%      end
-
-  %%%  end
-
-  %%%end
 
 end
