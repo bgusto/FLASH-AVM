@@ -1,22 +1,15 @@
-function dataStruct = GrabData(filenm, vars)
+function dataStruct = GrabData(filenm, vars, precision)
 %
 % GrabData Grab data from the specified FLASH checkpoint or plot file.
 %
 %-------------------------------------------------------------------------------%
 % Info:
 %   This function grabs data from FLASH hdf5 files for the variable of interest.
-%   The function takes block-partitioned data and converts it into a single
-%   array. For multi-level adaptive mesh refinement data, the user may choose to
-%   prolong all of the data to the finest level using the 'intrp' argument. The
-%   function assumes a Paramesh tree structure.
+%   The function assumes a Paramesh tree structure.
 %
 % Inputs:
 %   filenm - the hdf5 filename
 %   vars   - cell array of desired output variables (e.g. {'dens', 'pres', 'velx'}, or just {'dens'})
-%   intrp  - optional interpolation choice, if prolonging data
-%   reflvl - the desired refinement level, using the coarsest parent block
-%            found in the input file as the base level (found automatically if
-%            not provided and compatible 'intrp' option specified)
 %
 % Outputs:
 %   dataStruct - structure containing all data fields (solution field, mesh data, etc.)
@@ -39,29 +32,35 @@ function dataStruct = GrabData(filenm, vars)
 %
 %-------------------------------------------------------------------------------%
 
-  % determine if we want to prolong AMR data to finest level
+  % default arguments
   if nargin < 3
-    prolong = false;
-  else
-    prolong = true;
+    precision = 'single';
   end
 
   % construct cell array to pass
-  inputs = [{'node type', 'bounding box', 'refine level', 'real scalars'} vars];
+  inputs = [{'node type', 'bounding box', 'refine level', 'real scalars', 'integer scalars'} vars];
 
   % get 'varnm' variable data from current hdf5 data
   tmpData = GrabHDF5(filenm, inputs);
 
   % number of meta data elements
-  nmeta = 4;
+  nmeta = 5;
 
   % get simulation time
   for m = 1:length(tmpData{4})
     scalarnm = strtrim(h5stringconvert(tmpData{4}(m).Data{1}));
-    if strcmp(scalarnm, 'time')
+    if strcmp(erase(scalarnm,{''''}), 'time')
       dataStruct.simtime = tmpData{4}(m).Data{2};
-    elseif strcmp(scalarnm, 'dt')
+    elseif strcmp(erase(scalarnm,{''''}), 'dt')
       dataStruct.simdt = tmpData{4}(m).Data{2};
+    end
+  end
+
+  % get nstep
+  for m = 1:length(tmpData{5})
+    scalarnm = strtrim(h5stringconvert(tmpData{5}(m).Data{1}));
+    if strcmp(erase(scalarnm,{''''}), 'nstep')
+      dataStruct.nstep = tmpData{5}(m).Data{2};
     end
   end
 
@@ -142,15 +141,27 @@ function dataStruct = GrabData(filenm, vars)
       if secdim
         dataStruct.nonuniform.meshbnd(1,2,cnt) = ylo;
         dataStruct.nonuniform.meshbnd(2,2,cnt) = yhi;
+      else
+        dataStruct.nonuniform.meshbnd(1,2,cnt) = 0;
+        dataStruct.nonuniform.meshbnd(2,2,cnt) = 0;
       end
       if terdim
         dataStruct.nonuniform.meshbnd(1,3,cnt) = zlo;
         dataStruct.nonuniform.meshbnd(2,3,cnt) = zhi;
+      else
+        dataStruct.nonuniform.meshbnd(1,3,cnt) = 0;
+        dataStruct.nonuniform.meshbnd(2,3,cnt) = 0;
       end
 
       % save the solution data in dataStruct
-      for i = 1:dataStruct.nvars
-        dataStruct.nonuniform.(vars{i})(:,:,:,cnt) = tmpData{nmeta+i}(:,:,:,blk);
+      if precision == 'double'
+        for i = 1:dataStruct.nvars
+          dataStruct.nonuniform.(vars{i})(:,:,:,cnt) = tmpData{nmeta+i}(:,:,:,blk);
+        end
+      else
+        for i = 1:dataStruct.nvars
+          dataStruct.nonuniform.(vars{i})(:,:,:,cnt) = single(tmpData{nmeta+i}(:,:,:,blk));
+        end
       end
 
       % keep track of global min and max in case prolongation is to be used
@@ -181,10 +192,16 @@ function dataStruct = GrabData(filenm, vars)
   if secdim
     dataStruct.dombnd(1,2) = ymin;
     dataStruct.dombnd(2,2) = ymax;
+  else
+    dataStruct.dombnd(1,2) = 0;
+    dataStruct.dombnd(2,2) = 0;
   end
   if terdim
     dataStruct.dombnd(1,3) = zmin;
     dataStruct.dombnd(2,3) = zmax;
+  else
+    dataStruct.dombnd(1,3) = 0;
+    dataStruct.dombnd(2,3) = 0;
   end
 
 end

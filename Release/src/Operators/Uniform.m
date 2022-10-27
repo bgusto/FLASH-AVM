@@ -1,4 +1,4 @@
-function dataStruct = Uniform(dataStruct, refLevel, interpType, interpOrder)
+function dataStruct = Uniform(dataStruct, useProlong, refLevel, interpType, interpOrder, saveNonUni, precision)
 %
 % Uniform Convert the nonuniform dataStruct to uniformm with possible prolongation
 %
@@ -29,6 +29,17 @@ function dataStruct = Uniform(dataStruct, refLevel, interpType, interpOrder)
 %
 %-------------------------------------------------------------------------------%
 
+  % default arguments
+  if nargin < 2
+    useProlong = false;
+  end
+  if nargin < 6
+    saveNonUni = false;
+  end
+  if nargin < 7
+    precision = 'single';
+  end
+
   % only consider 2d and 3d
   secdim = true;
   terdim = false;
@@ -43,14 +54,8 @@ function dataStruct = Uniform(dataStruct, refLevel, interpType, interpOrder)
   lref_min = min(dataStruct.nonuniform.lrefine);
   lref_max = max(dataStruct.nonuniform.lrefine);
 
-  % check if prolonging
-  prolong = true;
-  if nargin < 2 | lref_min == lref_max
-    prolong = false; 
-  end
-
   % switch based on prolonging or not
-  if prolong
+  if useProlong
 
   else
 
@@ -109,16 +114,40 @@ function dataStruct = Uniform(dataStruct, refLevel, interpType, interpOrder)
 
     end
 
+    % compute the new uniform mesh (assuming constant block sizes for now)
+    xe = linspace(dataStruct.dombnd(1,1), ...
+                  dataStruct.dombnd(2,1), ...
+                  nblockx*nxb+1);
+    ye = linspace(dataStruct.dombnd(1,2), ...
+                  dataStruct.dombnd(2,2), ...
+                  nblocky*nyb+1);
+    ze = linspace(dataStruct.dombnd(1,3), ...
+                  dataStruct.dombnd(2,3), ...
+                  nblockz*nzb+1);
+    xc = 0.5*(xe(1:end-1)+xe(2:end));
+    yc = 0.5*(ye(1:end-1)+ye(2:end));
+    zc = 0.5*(ze(1:end-1)+ze(2:end));
+    if terdim
+      [dataStruct.uniform.mesh{1} dataStruct.uniform.mesh{2} dataStruct.uniform.mesh{3}] = ndgrid(xc,yc,zc);
+    else
+      [dataStruct.uniform.mesh{1} dataStruct.uniform.mesh{2}] = ndgrid(xc,yc);
+    end
+
     % compute block interfaces in each direction
     block_intrfc_x = linspace(dataStruct.dombnd(1,1), dataStruct.dombnd(2,1), nblockx+1);
     block_intrfc_y = linspace(dataStruct.dombnd(1,2), dataStruct.dombnd(2,2), nblocky+1);
     block_intrfc_z = linspace(dataStruct.dombnd(1,3), dataStruct.dombnd(2,3), nblockz+1);
 
     % initialize master arrays
-    for v = 1:dataStruct.nvars
-      dataStruct.uniform.(dataStruct.vars{v}) = zeros(nxb*nblockx,nyb*nblocky,nzb*nblocky);
+    if precision == 'double'
+      for v = 1:dataStruct.nvars
+        dataStruct.uniform.(dataStruct.vars{v}) = zeros(nxb*nblockx,nyb*nblocky,nzb*nblockz);
+      end
+    else
+      for v = 1:dataStruct.nvars
+        dataStruct.uniform.(dataStruct.vars{v}) = zeros(nxb*nblockx,nyb*nblocky,nzb*nblockz,'single');
+      end
     end
-    %dataStruct.uniform.mesh{1} = linspace(nxb*nblockx+1,nyb*nblocky+1,nzb*nblocky+1), 3);
 
     % loop through blocks in data structure
     for blk = 1:dataStruct.nonuniform.nblocks
@@ -147,14 +176,25 @@ function dataStruct = Uniform(dataStruct, refLevel, interpType, interpOrder)
 
       % copy data from old to new arrays
       for v = 1:dataStruct.nvars
+
+        % copy
         dataStruct.uniform.(dataStruct.vars{v})(ilo:ihi,jlo:jhi,klo:khi) = dataStruct.nonuniform.(dataStruct.vars{v})(:,:,:,blk);
+
       end
+
 
       % copy mesh data
       %dataStruct.uniform.mesh(ilo:ihi,jlo:jhi,klo:khi+1)
 
     end
 
+  end
+
+  % delete nonuniform data
+  if ~saveNonUni
+    for v = 1:dataStruct.nvars
+      dataStruct.nonuniform.(dataStruct.vars{v}) = [];
+    end
   end
 
 end

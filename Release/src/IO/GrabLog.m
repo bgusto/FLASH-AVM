@@ -1,17 +1,13 @@
-function Data = GrabHDF5(filename, vars)
+function values = GrabLog(logFile, searchStrings)
 %
-% GrabHDF5 Grab data from the given HDF5 file
+% GrabLog Get timing data from FLASH log file
 %
 %-------------------------------------------------------------------------------%
-% Info: This function grabs data, and any specified meta-data, from the given
-%   hdf5 file. Meta-data might include the node type, bounding box, etc.
+% Info:
 %
 % Inputs:
-%   filename -  the hdf5 filename
-%   vars -   the variable name to be plotted from hdf5 files (a string)
 %
 % Outputs:
-%   Data - the structure containing data and mesh meta-data
 %
 % Licensing:
 %   This file is part of FLASH-AVM.
@@ -31,16 +27,31 @@ function Data = GrabHDF5(filename, vars)
 %
 %-------------------------------------------------------------------------------%
 
-  % read data
-  hinfo = hdf5info(filename);
+  % number of strings
+  ns = length(searchStrings);
 
-  % find desired datasets
-  for i = 1 : length(hinfo.GroupHierarchy.Datasets)
-    for j = 1 : length(vars)
-      if strcmp(hinfo.GroupHierarchy.Datasets(i).Name, sprintf('/%s',vars{j}))
-        Data{j} = hdf5read(hinfo.GroupHierarchy.Datasets(i));
+  % open file, read first line
+  fid = fopen(logFile);
+  tline = fgetl(fid);
+  lineCounter = 1;
+  while ischar(tline)
+
+    % search for string(s)
+    for i = 1:ns
+      if length(strfind(tline, searchStrings(i))) > 0
+        Key = searchStrings(i);
+        Index = strfind(tline, Key);
+        values(i) = sscanf(tline(Index(1) + length(Key):end), '%g', 1); 
       end
     end
+
+    % Read next line
+    tline = fgetl(fid);
+    lineCounter = lineCounter + 1;
+
   end
+
+  % close
+  fclose(fid);
 
 end
