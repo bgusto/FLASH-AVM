@@ -1,7 +1,7 @@
 clc, clear all, clf
 
 % add flash-avm
-addpath(genpath(getenv('FLASHAVM_DEV')));
+addpath(genpath(getenv('FLASHAVM')));
 
 % set latex
 set(0,'defaulttextinterpreter','latex');
