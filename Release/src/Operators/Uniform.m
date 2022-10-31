@@ -1,4 +1,4 @@
-function dataStruct = Uniform(dataStruct, useProlong, refLevel, interpType, interpOrder, saveNonUni, precision)
+function dataStruct = Uniform(dataStruct, refLevel, interpType, saveNonUni, precision)
 %
 % Uniform Convert the nonuniform dataStruct to uniformm with possible prolongation
 %
@@ -30,14 +30,17 @@ function dataStruct = Uniform(dataStruct, useProlong, refLevel, interpType, inte
 %-------------------------------------------------------------------------------%
 
   % default arguments
-  if nargin < 2
-    useProlong = false;
+  if nargin < 2 | refLevel == 0
+    refLevel = dataStruct.lrefine_max;
   end
-  if nargin < 6
-    saveNonUni = false;
+  if nargin < 3
+    interpType = 'copy';
   end
-  if nargin < 7
-    precision = 'single';
+  if nargin < 4
+    saveNonUni = true;
+  end
+  if nargin < 5
+    precision = 'double';
   end
 
   % only consider 2d and 3d
@@ -50,141 +53,196 @@ function dataStruct = Uniform(dataStruct, useProlong, refLevel, interpType, inte
     terdim = true;
   end
 
-  % first, check the lrefine array
-  lref_min = min(dataStruct.nonuniform.lrefine);
+  % get domain boundaries
+  xlo = dataStruct.dombnd(1,1);
+  xhi = dataStruct.dombnd(2,1);
+  ylo = dataStruct.dombnd(1,2);
+  yhi = dataStruct.dombnd(2,2);
+  zlo = dataStruct.dombnd(1,3);
+  zhi = dataStruct.dombnd(2,3);
+
+  % get the number of cells per block
+  nxb = length(dataStruct.nonuniform.(dataStruct.vars{1})(:,1,1,1));
+  nyb = length(dataStruct.nonuniform.(dataStruct.vars{1})(1,:,1,1));
+  nzb = length(dataStruct.nonuniform.(dataStruct.vars{1})(1,1,:,1));
+
+  % difference in levels from finest to desired 
   lref_max = max(dataStruct.nonuniform.lrefine);
+  dl = double(refLevel) - double(lref_max);
 
-  % switch based on prolonging or not
-  if useProlong
+  % abort if nxb*2^(dl) < 1
+  if nxb*2^(dl) < 1 | nyb*2^(dl) < 1
+    error('Cannot coarsen the block data to the desired level. Raise desired refinement level.')
+  end
 
-  else
+  % get the cell resolution at the desired level
+  dx_desired = 2^(-dl) * min(dataStruct.nonuniform.meshres(1,:));
+  dy_desired = 2^(-dl) * min(dataStruct.nonuniform.meshres(2,:));
+  if terdim
+    dz_desired = 2^(-dl) * min(dataStruct.nonuniform.meshres(3,:));
+  end
 
-    % get domain boundaries
-    xlo = dataStruct.dombnd(1,1);
-    xhi = dataStruct.dombnd(2,1);
-    ylo = dataStruct.dombnd(1,2);
-    yhi = dataStruct.dombnd(2,2);
-    zlo = dataStruct.dombnd(1,3);
-    zhi = dataStruct.dombnd(2,3);
-
-    % get the number of cells per block
-    nxb = length(dataStruct.nonuniform.(dataStruct.vars{1})(:,1,1,1));
-    nyb = length(dataStruct.nonuniform.(dataStruct.vars{1})(1,:,1,1));
-    nzb = length(dataStruct.nonuniform.(dataStruct.vars{1})(1,1,:,1));
-
-    % get number of blocks per dimension
-    nblockx = 0;
-    nblocky = 0;
-    nblockz = 0;
-    for blk = 1:dataStruct.nonuniform.nblocks
-
-      if terdim
-
-        % along x-axis
-        if dataStruct.nonuniform.meshbnd(1,2,blk) == ylo ...
-          & dataStruct.nonuniform.meshbnd(1,3,blk) == zlo
-          nblockx = nblockx + 1;
-        end
-
-        % along y-axis
-        if dataStruct.nonuniform.meshbnd(1,1,blk) == xlo ...
-          & dataStruct.nonuniform.meshbnd(1,3,blk) == zlo
-          nblocky = nblocky + 1;
-        end
-
-        % along z-axis
-        if dataStruct.nonuniform.meshbnd(1,1,blk) == xlo ...
-          & dataStruct.nonuniform.meshbnd(1,2,blk) == ylo
-          nblockz = nblockz + 1;
-        end
-
-      else
-
-        % along x-axis
-        if dataStruct.nonuniform.meshbnd(1,2,blk) == ylo
-          nblockx = nblockx + 1;
-        end
-
-        % along y-axis
-        if dataStruct.nonuniform.meshbnd(1,1,blk) == xlo
-          nblocky = nblocky + 1;
-        end
-
-      end
-
-    end
-
-    % compute the new uniform mesh (assuming constant block sizes for now)
-    xe = linspace(dataStruct.dombnd(1,1), ...
-                  dataStruct.dombnd(2,1), ...
-                  nblockx*nxb+1);
-    ye = linspace(dataStruct.dombnd(1,2), ...
-                  dataStruct.dombnd(2,2), ...
-                  nblocky*nyb+1);
-    ze = linspace(dataStruct.dombnd(1,3), ...
-                  dataStruct.dombnd(2,3), ...
-                  nblockz*nzb+1);
-    xc = 0.5*(xe(1:end-1)+xe(2:end));
-    yc = 0.5*(ye(1:end-1)+ye(2:end));
+  % create the uniform mesh
+  xe = xlo:dx_desired:xhi;
+  ye = ylo:dy_desired:yhi;
+  if terdim
+    ze = zlo:dz_desired:zhi;
+  end
+  xc = 0.5*(xe(1:end-1)+xe(2:end));
+  nx = length(xc);
+  yc = 0.5*(ye(1:end-1)+ye(2:end));
+  ny = length(yc);
+  if terdim
     zc = 0.5*(ze(1:end-1)+ze(2:end));
+    nz = length(zc);
+  else
+    nz = 1;
+  end
+  if terdim
+    [dataStruct.uniform.mesh{1} dataStruct.uniform.mesh{2} dataStruct.uniform.mesh{3}] = ndgrid(xc,yc,zc);
+  else
+    [dataStruct.uniform.mesh{1} dataStruct.uniform.mesh{2}] = ndgrid(xc,yc);
+  end
+
+  % initialize master arrays
+  if strcmp(precision, 'double')
+    for v = 1:dataStruct.nvars
+      dataStruct.uniform.(dataStruct.vars{v}) = zeros(nx,ny,nz);
+    end
+  else
+    for v = 1:dataStruct.nvars
+      dataStruct.uniform.(dataStruct.vars{v}) = zeros(nx,ny,nz,'single');
+    end
+  end
+
+  % loop through nonuniform structure and prolong if necessary to uniform grid
+  for blk = 1:dataStruct.nonuniform.nblocks
+
+    % lower ends of the block in each dimension
+    bxlo = dataStruct.nonuniform.meshbnd(1,1,blk);
+    bxhi = dataStruct.nonuniform.meshbnd(2,1,blk);
+    bylo = dataStruct.nonuniform.meshbnd(1,2,blk);
+    byhi = dataStruct.nonuniform.meshbnd(2,2,blk);
+    bzlo = dataStruct.nonuniform.meshbnd(1,3,blk);
+    bzhi = dataStruct.nonuniform.meshbnd(2,3,blk);
+
+    % find where tmp fits into uniform grid at the finest level
+    ilo = find(xe == bxlo);
+    ihi = find(xe == bxhi);
+    jlo = find(ye == bylo);
+    jhi = find(ye == byhi);
     if terdim
-      [dataStruct.uniform.mesh{1} dataStruct.uniform.mesh{2} dataStruct.uniform.mesh{3}] = ndgrid(xc,yc,zc);
-    else
-      [dataStruct.uniform.mesh{1} dataStruct.uniform.mesh{2}] = ndgrid(xc,yc);
+      klo = find(ze == bzlo);
+      khi = find(ze == bzhi);
     end
 
-    % compute block interfaces in each direction
-    block_intrfc_x = linspace(dataStruct.dombnd(1,1), dataStruct.dombnd(2,1), nblockx+1);
-    block_intrfc_y = linspace(dataStruct.dombnd(1,2), dataStruct.dombnd(2,2), nblocky+1);
-    block_intrfc_z = linspace(dataStruct.dombnd(1,3), dataStruct.dombnd(2,3), nblockz+1);
+    % difference between desired level and current block's level
+    dl = refLevel - dataStruct.nonuniform.lrefine(blk);
 
-    % initialize master arrays
-    if precision == 'double'
-      for v = 1:dataStruct.nvars
-        dataStruct.uniform.(dataStruct.vars{v}) = zeros(nxb*nblockx,nyb*nblocky,nzb*nblockz);
-      end
-    else
-      for v = 1:dataStruct.nvars
-        dataStruct.uniform.(dataStruct.vars{v}) = zeros(nxb*nblockx,nyb*nblocky,nzb*nblockz,'single');
-      end
-    end
+    % prolong up to finest level (or coarsen)
+    if dl > 0
 
-    % loop through blocks in data structure
-    for blk = 1:dataStruct.nonuniform.nblocks
-
-      % lower ends of the block in each dimension
-      xlo = dataStruct.nonuniform.meshbnd(1,1,blk);
-      ylo = dataStruct.nonuniform.meshbnd(1,2,blk);
-      zlo = dataStruct.nonuniform.meshbnd(1,3,blk);
-
-      % block position in each direction
-      block_pos_x = find(block_intrfc_x == xlo);
-      block_pos_y = find(block_intrfc_y == ylo);
-      block_pos_z = find(block_intrfc_z == zlo);
-
-      % determine starting indices in the master array
-      ilo = nxb * (block_pos_x -1) + 1;
-      jlo = nyb * (block_pos_y -1) + 1;
-      klo = nzb * (block_pos_z -1) + 1;
-      ihi = ilo + nxb - 1;
-      jhi = jlo + nyb - 1;
-      khi = klo + nzb - 1;
-%      disp(nxb)
-%      disp(nyb)
-%      disp(nzb)
-%      disp([klo khi])
-
-      % copy data from old to new arrays
+      % loop through vars
       for v = 1:dataStruct.nvars
 
-        % copy
-        dataStruct.uniform.(dataStruct.vars{v})(ilo:ihi,jlo:jhi,klo:khi) = dataStruct.nonuniform.(dataStruct.vars{v})(:,:,:,blk);
+        % temporary data field
+        if terdim
+          tmp = zeros((2^dl)*nxb,(2^dl)*nyb,(2^dl)*nzb);
+        else
+          tmp = zeros((2^dl)*nxb,(2^dl)*nyb,1);
+        end
+
+        % copy data or interpolate
+        if interpType == 'copy'
+
+          if terdim
+            for k = 1:nzb
+              for j = 1:nyb
+                for i = 1:nxb
+                  tmp(i,j,k) = dataStruct.nonuniform.(dataStruct.vars{v})(:,:,:,blk);
+                end
+              end
+            end
+          else
+            for j = 1:nyb
+              for i = 1:nxb
+                tmp((2^dl*(i-1)+1):(2^dl*(i-1)+2^dl),(2^dl*(j-1)+1):(2^dl*(j-1)+2^dl)) = dataStruct.nonuniform.(dataStruct.vars{v})(i,j,1,blk) * ones(2^dl,2^dl);
+              end
+            end
+          end
+
+        end
+
+        % copy tmp data to new uniform grid datastructure
+        if terdim
+          dataStruct.uniform.(dataStruct.vars{v})(ilo:(ilo+2^dl*nxb-1),jlo:(jlo+2^dl*nyb-1),klo:(klo+2^dl*nzb-1)) = tmp;
+        else
+          dataStruct.uniform.(dataStruct.vars{v})(ilo:(ilo+2^dl*nxb-1),jlo:(jlo+2^dl*nyb-1),1) = tmp;
+        end
 
       end
 
+    else % coarsen
 
-      % copy mesh data
-      %dataStruct.uniform.mesh(ilo:ihi,jlo:jhi,klo:khi+1)
+      % loop through vars
+      for v = 1:dataStruct.nvars
+
+        % temporary data storage
+        if terdim
+          tmpFine = dataStruct.nonuniform.(dataStruct.vars{v})(:,:,:,blk);
+        else
+          tmpFine = dataStruct.nonuniform.(dataStruct.vars{v})(:,:,1,blk);
+        end
+
+        % loop until coarsest level
+        for l = 1:abs(dl)-1
+
+          % initialize coarse variable
+          if terdim
+            tmpCoarse = zeros(nxb/2^(-l),nyb/2^(-l),nzb/2^(-l));
+          else
+            tmpCoarse = zeros(nxb/2^(-l),nyb/2^(-l),1);
+          end
+
+          if terdim
+            for k = 1:nzb/2^(-l)
+              for j = 1:nyb/2^(-l)
+                for i = 1:nxb/2^(-l)
+                  tmpCoarse(i,j,k) = 0.125*(tmpFine(2*i-1,2*j-1,2*k-1) + ...
+                                            tmpFine(2*i-1,2*j-1,2*k) + ...
+                                            tmpFine(2*i-1,2*j,2*k-1) + ...
+                                            tmpFine(2*i,2*j-1,2*k-1) + ...
+                                            tmpFine(2*i-1,2*j,2*k) + ...
+                                            tmpFine(2*i,2*j-1,2*k) + ...
+                                            tmpFine(2*i,2*j,2*k-1) + ...
+                                            tmpFine(2*i,2*j,2*k));
+                end
+              end
+            end
+          else
+            for j = 1:nyb/2^(-l)
+              for i = 1:nxb/2^(-l)
+                tmpCoarse(i,j,k) = 0.25*(tmpFine(2*i,2*j-1,1) + ...
+                                          tmpFine(2*i-1,2*j,1) + ...
+                                          tmpFine(2*i,2*j,1) + ...
+                                          tmpFine(2*i-1,2*j-1,1));
+              end
+            end
+          end
+
+          % reset variables
+          tmpFine = tmpCoarse;
+
+        end
+
+        % copy tmp data to new uniform grid datastructure
+        if terdim
+          dataStruct.uniform.(dataStruct.vars{v})(ilo:(ilo+2^dl*nxb-1),jlo:(jlo+2^dl*nyb-1),klo:(klo+2^dl*nzb-1)) = tmpFine;
+        else
+          dataStruct.uniform.(dataStruct.vars{v})(ilo:(ilo+2^dl*nxb-1),jlo:(jlo+2^dl*nyb-1),1) = tmpFine;
+        end
+
+      end
 
     end
 

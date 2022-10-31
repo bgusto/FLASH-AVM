@@ -4,23 +4,21 @@ clc, clear all, clf
 addpath(getenv('FLASHAVM'));
 
 % misc. options
-fs_labl = 18;       % abcissa-ordinate label fontsize
-fs_axes = 11;       % fontsize for tick labels
-fs_lgnd = 14;       % fontsize for legend
+fs_labl = 16;       % abcissa-ordinate label fontsize
+fs_axes = 10;       % fontsize for tick labels
+fs_lgnd = 12;       % fontsize for legend
 lw = 1.5;
 
 % name of integrated quantities file
 filenm = '../data/sedov.dat';
 
 % get cell count from integral quantities file
-[ekin time] = GrabIntegralQuantity(filenm,'E_kinetic');
-[eint time] = GrabIntegralQuantity(filenm,'E_internal');
-[etot time] = GrabIntegralQuantity(filenm,'E_total');
+iq = GrabIntegralQuantity(filenm);
 
 % plot the number of cells over time
-semilogy(time,ekin,'b','linewidth',lw); hold on;
-semilogy(time,eint,'r','linewidth',lw); hold on;
-semilogy(time,etot,'k','linewidth',lw);
+semilogy(iq.time,iq.E_kinetic,'b','linewidth',lw); hold on;
+semilogy(iq.time,iq.E_internal,'r','linewidth',lw); hold on;
+semilogy(iq.time,iq.E_total,'k','linewidth',lw);
 
 % options
 

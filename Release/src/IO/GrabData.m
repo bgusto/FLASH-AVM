@@ -34,17 +34,17 @@ function dataStruct = GrabData(filenm, vars, precision)
 
   % default arguments
   if nargin < 3
-    precision = 'single';
+    precision = 'double';
   end
 
   % construct cell array to pass
-  inputs = [{'node type', 'bounding box', 'refine level', 'real scalars', 'integer scalars'} vars];
+  inputs = [{'node type', 'bounding box', 'refine level', 'real scalars', 'integer scalars', 'integer runtime parameters'} vars];
 
   % get 'varnm' variable data from current hdf5 data
   tmpData = GrabHDF5(filenm, inputs);
 
   % number of meta data elements
-  nmeta = 5;
+  nmeta = 6;
 
   % get simulation time
   for m = 1:length(tmpData{4})
@@ -61,6 +61,17 @@ function dataStruct = GrabData(filenm, vars, precision)
     scalarnm = strtrim(h5stringconvert(tmpData{5}(m).Data{1}));
     if strcmp(erase(scalarnm,{''''}), 'nstep')
       dataStruct.nstep = tmpData{5}(m).Data{2};
+    end
+  end
+
+  % get lrefine max, min
+  for m = 1:length(tmpData{6})
+    scalarnm = strtrim(h5stringconvert(tmpData{6}(m).Data{1}));
+    if strcmp(erase(scalarnm,{''''}), 'lrefine_max')
+      dataStruct.lrefine_max = tmpData{6}(m).Data{2};
+    end
+    if strcmp(erase(scalarnm,{''''}), 'lrefine_min')
+      dataStruct.lrefine_min = tmpData{6}(m).Data{2};
     end
   end
 
@@ -118,9 +129,9 @@ function dataStruct = GrabData(filenm, vars, precision)
       if terdim, data.nonuniform.ncb = [nxb nyb nzb]; end
 
       % cell width
-      dx = (xhi - xlo) / nxb;
-      if secdim, dy = (yhi - ylo) / nyb; end
-      if terdim, dz = (zhi - zlo) / nzb; end
+      dx = double((xhi - xlo) / nxb);
+      if secdim, dy = double((yhi - ylo) / nyb); end
+      if terdim, dz = double((zhi - zlo) / nzb); end
 
       % add local mesh resolution to dataStruct
       dataStruct.nonuniform.meshres(1,cnt) = dx;
@@ -154,7 +165,7 @@ function dataStruct = GrabData(filenm, vars, precision)
       end
 
       % save the solution data in dataStruct
-      if precision == 'double'
+      if strcmp(precision, 'double')
         for i = 1:dataStruct.nvars
           dataStruct.nonuniform.(vars{i})(:,:,:,cnt) = tmpData{nmeta+i}(:,:,:,blk);
         end
@@ -183,7 +194,7 @@ function dataStruct = GrabData(filenm, vars, precision)
 
   end
 
-  % save the number of leaf blocks
+  % save the number of total blocks and leaf
   dataStruct.nonuniform.nblocks = cnt - 1;
 
   % save the global xmin, xmax, ...
